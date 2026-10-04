@@ -48,6 +48,18 @@ class SupabaseAuthTest extends TestCase
             ->assertSee('Use at least 12 characters.');
     }
 
+    public function test_auth_callback_uses_https_behind_a_tls_terminating_proxy(): void
+    {
+        $this->withServerVariables([
+            'HTTP_X_FORWARDED_FOR' => '203.0.113.10',
+            'HTTP_X_FORWARDED_PROTO' => 'https',
+            'HTTP_X_FORWARDED_PORT' => '443',
+        ])
+            ->get('/login')
+            ->assertOk()
+            ->assertSee('data-callback-url="https://localhost/auth/callback"', false);
+    }
+
     public function test_a_verified_supabase_user_is_synchronized_and_given_a_laravel_session(): void
     {
         $userId = 'a4d7c66f-f343-4c5b-9bb2-e95448d6c3bb';
