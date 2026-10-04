@@ -355,6 +355,7 @@
     }
     .add-btn svg { width: 15px; height: 15px; color: var(--editor-accent); }
     .add-btn:hover { border-color: rgba(156,225,192,.62); background: rgba(156,225,192,.045); color: #fff; }
+    .add-btn:disabled { opacity: .55; cursor: not-allowed; }
 
     .editor-actions {
         position: sticky;
@@ -480,6 +481,20 @@
 @section('content')
 @php
     $linkMap = $links->pluck('url', 'platform');
+    $submittedProjects = old('projects');
+    if (is_array($submittedProjects)) {
+        $projectFormRows = collect($submittedProjects)->map(function ($submittedProject, $index) use ($projects) {
+            $savedProject = $projects->firstWhere('display_order', (int) $index);
+            $values = is_array($submittedProject) ? $submittedProject : [];
+
+            return (object) array_merge((array) $savedProject, $values, ['display_order' => (int) $index]);
+        });
+        if ($projectFormRows->isEmpty()) {
+            $projectFormRows = collect([(object) []]);
+        }
+    } else {
+        $projectFormRows = $projects->count() ? $projects : collect([(object) []]);
+    }
 @endphp
 
 <div class="portfolio-editor">
@@ -505,6 +520,9 @@
         </div>
     </header>
 
+    <form id="portfolio-edit-form" class="editor-form" action="{{ route('portfolio.update', $portfolio->id) }}" method="POST" enctype="multipart/form-data" data-loading data-warn-unsaved>
+        @csrf
+        @method('PUT')
                 <div class="photo-card">
                     <div class="photo-preview-box" id="photo-preview-box">
                         @if(!empty($info->photo_url))
@@ -691,7 +709,7 @@
                     <div><h2 id="projects-heading">Projects</h2><p>Feature the work you are proud of and link visitors to the details.</p></div>
                 </header>
                 <div id="project-list">
-                    @foreach(($projects->count() ? $projects : collect([(object) []])) as $project)
+                    @foreach($projectFormRows as $project)
                     {{-- The index must equal display_order: the controller uses it to keep the old screenshot. --}}
                     @php $i = $project->display_order ?? $loop->index; @endphp
                     <div class="repeatable-item">
@@ -700,20 +718,32 @@
                         </button>
                         <div class="form-group">
                             <label for="project-{{ $i }}-title">Project title</label>
-                            <input type="text" id="project-{{ $i }}-title" name="projects[{{ $i }}][title]" value="{{ $project->title ?? '' }}" placeholder="My awesome project">
+                            <input type="text" id="project-{{ $i }}-title" name="projects[{{ $i }}][title]" value="{{ $project->title ?? '' }}" placeholder="My awesome project" @if($errors->has("projects.$i.title")) aria-invalid="true" aria-describedby="project-{{ $i }}-title-error" @endif>
+                            @if($errors->has("projects.$i.title"))
+                                <span class="field-error" id="project-{{ $i }}-title-error" role="alert">{{ $errors->first("projects.$i.title") }}</span>
+                            @endif
                         </div>
                         <div class="form-group">
                             <label for="project-{{ $i }}-description">Description</label>
-                            <textarea id="project-{{ $i }}-description" name="projects[{{ $i }}][description]" placeholder="What does this project do?">{{ $project->description ?? '' }}</textarea>
+                            <textarea id="project-{{ $i }}-description" name="projects[{{ $i }}][description]" placeholder="What does this project do?" @if($errors->has("projects.$i.description")) aria-invalid="true" aria-describedby="project-{{ $i }}-description-error" @endif>{{ $project->description ?? '' }}</textarea>
+                            @if($errors->has("projects.$i.description"))
+                                <span class="field-error" id="project-{{ $i }}-description-error" role="alert">{{ $errors->first("projects.$i.description") }}</span>
+                            @endif
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="project-{{ $i }}-live">Live URL</label>
-                                <input type="url" id="project-{{ $i }}-live" name="projects[{{ $i }}][live_url]" value="{{ $project->live_url ?? '' }}" placeholder="https://myproject.com">
+                                <input type="url" id="project-{{ $i }}-live" name="projects[{{ $i }}][live_url]" value="{{ $project->live_url ?? '' }}" placeholder="https://myproject.com" @if($errors->has("projects.$i.live_url")) aria-invalid="true" aria-describedby="project-{{ $i }}-live-error" @endif>
+                                @if($errors->has("projects.$i.live_url"))
+                                    <span class="field-error" id="project-{{ $i }}-live-error" role="alert">{{ $errors->first("projects.$i.live_url") }}</span>
+                                @endif
                             </div>
                             <div class="form-group">
                                 <label for="project-{{ $i }}-repo">GitHub or repo URL</label>
-                                <input type="url" id="project-{{ $i }}-repo" name="projects[{{ $i }}][repo_url]" value="{{ $project->repo_url ?? '' }}" placeholder="https://github.com/me/project">
+                                <input type="url" id="project-{{ $i }}-repo" name="projects[{{ $i }}][repo_url]" value="{{ $project->repo_url ?? '' }}" placeholder="https://github.com/me/project" @if($errors->has("projects.$i.repo_url")) aria-invalid="true" aria-describedby="project-{{ $i }}-repo-error" @endif>
+                                @if($errors->has("projects.$i.repo_url"))
+                                    <span class="field-error" id="project-{{ $i }}-repo-error" role="alert">{{ $errors->first("projects.$i.repo_url") }}</span>
+                                @endif
                             </div>
                         </div>
                         <div class="form-group">
@@ -725,8 +755,11 @@
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m5 17 4.5-4 3.5 3 2.5-2 3.5 3"/></svg>
                                 @endif
                             </div>
-                            <input type="file" id="project-{{ $i }}-screenshot" name="projects[{{ $i }}][screenshot]" accept="image/jpeg,image/png,image/webp" onchange="previewScreenshot(this, 'screenshot-preview-{{ $i }}')">
+                            <input type="file" id="project-{{ $i }}-screenshot" name="projects[{{ $i }}][screenshot]" accept="image/jpeg,image/png,image/webp" onchange="previewScreenshot(this, 'screenshot-preview-{{ $i }}')" @if($errors->has("projects.$i.screenshot")) aria-invalid="true" aria-describedby="project-{{ $i }}-screenshot-error" @endif>
                             <span class="form-help">JPG, PNG or WebP · Up to 4 MB · Leave empty to keep the current screenshot.</span>
+                            @if($errors->has("projects.$i.screenshot"))
+                                <span class="field-error" id="project-{{ $i }}-screenshot-error" role="alert">{{ $errors->first("projects.$i.screenshot") }} Please choose the screenshot again after correcting it.</span>
+                            @endif
                         </div>
                     </div>
                     @endforeach
@@ -735,6 +768,7 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
                     Add project
                 </button>
+                <span class="form-help" id="project-limit-status" role="status" aria-live="polite"></span>
             </section>
 
             <div class="editor-actions">
@@ -759,14 +793,16 @@
 <script>
 let eduCount = {{ max($education->count(), 1) }};
 let expCount = {{ max($experiences->count(), 1) }};
-let projCount = {{ $projects->count() ? ($projects->max('display_order') + 1) : 1 }};
+let projCount = {{ max((int) ($projectFormRows->keys()->max() ?? -1) + 1, 1) }};
 
 const removeIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M5 7h14M10 11v6m4-6v6M6.5 7l.7 13h9.6l.7-13M9 7V4h6v3"/></svg>';
 const addIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 const screenshotPlaceholder = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m5 17 4.5-4 3.5 3 2.5-2 3.5 3"/></svg>';
 
 function removeItem(button) {
+    const projectList = button.closest('#project-list');
     button.closest('.repeatable-item').remove();
+    if (projectList) updateProjectAddControl();
 }
 
 function previewPhoto(input) {
@@ -827,6 +863,8 @@ function addExperience() {
 }
 
 function addProject() {
+    if (document.querySelectorAll('#project-list .repeatable-item').length >= 8) return;
+
     const index = projCount++;
     const previewId = `screenshot-preview-${index}`;
     const item = `
@@ -846,6 +884,24 @@ function addProject() {
             </div>
         </div>`;
     document.getElementById('project-list').insertAdjacentHTML('beforeend', item);
+    updateProjectAddControl();
+}
+
+function updateProjectAddControl() {
+    const addButton = document.querySelector('#projects .add-btn');
+    const limitStatus = document.getElementById('project-limit-status');
+    const count = document.querySelectorAll('#project-list .repeatable-item').length;
+    if (!addButton) return;
+
+    const limitReached = count >= 8;
+    addButton.disabled = limitReached;
+    addButton.setAttribute('aria-disabled', String(limitReached));
+    addButton.title = limitReached ? 'The limit is 8 projects. Remove one to add another.' : '';
+    if (limitStatus) {
+        limitStatus.textContent = limitReached
+            ? 'You have reached the 8-project limit. Remove an entry before adding another.'
+            : `Project entries: ${count} of 8. You can add ${8 - count} more.`;
+    }
 }
 
 const editorSections = document.querySelectorAll('.editor-section');
@@ -865,6 +921,8 @@ if ('IntersectionObserver' in window) {
     }, { rootMargin: '-18% 0px -68% 0px' });
     editorSections.forEach(section => sectionObserver.observe(section));
 }
+
+updateProjectAddControl();
 </script>
 @endsection
 
