@@ -1,0 +1,73 @@
+services:
+  - type: web
+    name: portfold
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /up
+    autoDeploy: true
+    envVars:
+      - key: APP_NAME
+        value: PortFold
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_URL
+        value: https://portfold.onrender.com
+      - key: ASSET_URL
+        value: https://portfold.onrender.com
+      - key: APP_KEY
+        sync: false
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: info
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_DATABASE
+        value: postgres
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SSLMODE
+        value: require
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SESSION_DRIVER
+        value: database
+      - key: SESSION_ENCRYPT
+        value: "true"
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: FILESYSTEM_DISK
+        value: local
+      - key: APACHE_HTTP_PORT
+        value: "10000"
+      - key: PHP_OPCACHE_ENABLE
+        value: "1"
+      - key: AUTORUN_ENABLED
+        value: "true"
+      - key: AUTORUN_LARAVEL_OPTIMIZE
+        value: "false"
+      - key: AUTORUN_LARAVEL_MIGRATION
+        value: "true"
+      - key: AUTORUN_LARAVEL_ROUTE_CACHE
+        value: "false"
+      - key: AUTORUN_LARAVEL_STORAGE_LINK
+        value: "false"
