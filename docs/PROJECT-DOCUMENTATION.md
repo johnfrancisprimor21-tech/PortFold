@@ -5,7 +5,7 @@
 | Item | Details |
 | --- | --- |
 | Project title | PortFold — Online Portfolio Template Generator |
-| Student / team | Add the name(s) required by the course submission |
+| Student / team | Primor John Francis C. |
 | Description | A web application for creating, saving, previewing, managing, and exporting personal portfolios using three selectable templates. |
 | Published website | [https://portfold.onrender.com](https://portfold.onrender.com) |
 | Source code | [https://github.com/johnfrancisprimor21-tech/PortFold](https://github.com/johnfrancisprimor21-tech/PortFold) |
@@ -28,9 +28,9 @@ PortFold helps people publish a portfolio without hand-coding a personal website
 | Save and retrieve information online | Laravel uses the configured Supabase PostgreSQL connection; uploaded images use Supabase Storage. |
 | Select a template and preview the generated portfolio | Template selection saves the chosen template; the preview/public routes render that Blade template. |
 | Edit and delete portfolio information | Authenticated owner routes provide edit/update/delete and the manage page. |
-| Publish the system with a working URL | The Render service is configured in `render.yaml`; the current URL is listed above. |
+| Publish the system with a working URL | The Render service and public URL are configured. Application code from commit `393a6a9` passed the latest verified Render deployment after the `/up` health-check path was aligned. See the deployment status below and QA checklist. |
 | Provide readable, organized, responsive UI | The layouts use mobile breakpoints, visible focus styles, semantic labels, field feedback, and reduced-motion handling. Verify the manual checks in `QA-CHECKLIST.md` before claiming complete accessibility or device coverage. |
-| Submit source code and project documentation | Source repository and this documentation are listed above. Add the required template screenshots before final submission. |
+| Submit source code, project documentation, and screenshots | The repository includes this report, QA checklist, prototype/issue log, and desktop captures of Simple (light and dark), Modern, Creative, and the email-confirmation screen. The captures use synthetic data. |
 
 ## Main user flow
 
@@ -67,7 +67,7 @@ The creation, edit, management, and export actions require the signed-in user to
 - **Modern:** card- and section-based portfolio with visual hierarchy and interactive details.
 - **Creative:** expressive layout with a Three.js hero scene and floating skill visuals.
 
-The screenshots below were captured from the local app using synthetic demo content. They document the current visual prototypes, not a usability study or cross-device certification.
+The screenshots below were captured from the app using synthetic demo content. They document the current visual prototypes and the email-confirmation screen, not a usability study or cross-device certification.
 
 | Screenshot | Evidence |
 | --- | --- |
@@ -120,6 +120,11 @@ The current deployment uses Render with a Docker image defined by `Dockerfile` a
 
 Google sign-in also depends on Supabase Auth and Google OAuth configuration. The Google provider must be enabled, the Supabase callback must be registered in Google Cloud, and the PortFold callback URL must be an allowed Supabase redirect. If the OAuth consent screen is in testing mode, the evaluator's account needs to be listed as a test user.
 
+## Current deployment status — 2026-10-05
+
+Render initially timed out the auto-deploy for commit `393a6a9` after 15 minutes 31 seconds. The image build completed; runtime logs showed a successful database connection, no pending migrations, and Apache/PHP-FPM startup. The dashboard did not have an HTTP health-check path, although `render.yaml` specifies `/up`. After I set the dashboard path to `/up`, the retry for `393a6a9` deployed successfully in 46.6 seconds. Render logs show an HTTP 200 from `/up`; read-only external requests to `/`, `/up`, `/login`, `/register`, and `/email/confirmation` returned HTTP 200. Render preserves the previous live version when a new deploy fails its health check ([Render health checks](https://render.com/docs/health-checks)).
+
+The Render free instance may spin down when idle, which can delay the first request by 50 seconds or more. This is a hosting limitation and should be explained during the instructor demo ([Render free services](https://render.com/docs/free)).
 ## Human-computer interaction choices
 
 - **Visibility of system status:** the creation flow has steps, save feedback, and field-level validation messages.

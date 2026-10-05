@@ -4,6 +4,10 @@ PortFold is an online portfolio generator. A user enters their professional info
 
 **Live site:** [https://portfold.onrender.com](https://portfold.onrender.com)
 
+### Deployment status — 2026-10-05
+
+Render first timed out commit `393a6a9` after 15 minutes 31 seconds. The Docker build and database startup completed, but the dashboard had no HTTP health-check path even though `render.yaml` specifies `/up`. I set the Render path to `/up`; the retry for the same commit then deployed successfully in 46.6 seconds, and Render received HTTP 200 from `/up`. The home, login, registration, and email-confirmation routes also returned HTTP 200 in a read-only smoke check. See the [QA checklist](docs/QA-CHECKLIST.md) for test limits and remaining manual checks. Render may cancel a deploy if the new instance does not pass health checks within 15 minutes ([health-check behavior](https://render.com/docs/health-checks)).
+
 **Source code:** [https://github.com/johnfrancisprimor21-tech/PortFold](https://github.com/johnfrancisprimor21-tech/PortFold)
 
 ## Features
@@ -149,4 +153,6 @@ These screenshots use synthetic demo content (`Alex Rivera`, `example.test`) and
 | --- | --- |
 | ![Modern neomorphic template](docs/screenshots/modern.jpg) | ![Creative template with black-hole hero and floating skills](docs/screenshots/creative.jpg) |
 
-The account confirmation landing page also has a [screenshot](docs/screenshots/email-confirmation.jpg).
+## System screenshot
+
+![Email confirmation screen](docs/screenshots/email-confirmation.jpg)
