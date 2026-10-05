@@ -9,6 +9,7 @@ Checked on 2026-10-05:
 - [x] `php artisan test` — **13 tests passed, 82 assertions** after adding coverage for the email-confirmation page.
 - [x] `npm run build` — completed successfully. Vite reports the optional `fontaine` package is unavailable and warns that the Creative hero JS chunk exceeds 500 kB minified; neither warning stopped the build.
 - [x] `GET https://portfold.onrender.com/` — HTTP 200.
+- [x] After pushing commit `32545bd`, opened `https://portfold.onrender.com/email/confirmation` in a browser; the deployed page rendered with the inbox instructions, resend control, sign-in link, and different-email link.
 - [x] `GET https://portfold.onrender.com/login` — HTTP 200.
 - [x] `GET https://portfold.onrender.com/up` — HTTP 200.
 - [x] Guest request to `/portfolio/create` — HTTP 302, confirming the authenticated route redirects a signed-out visitor to sign-in.
@@ -16,7 +17,7 @@ Checked on 2026-10-05:
 - [x] Captured and visually reviewed synthetic-data screenshots for Simple light/dark, Modern, Creative, and the email-confirmation landing page; files are in `docs/screenshots/`.
 - [x] Added a dedicated email-confirmation landing page with next steps, a resend action, and navigation back to sign-in or registration. Automated feature test confirms the route and key controls render.
 
-The automated suite covers Supabase token/session behavior and edit-form/project-save regressions. The production checks above were read-only. They do not prove Google OAuth completion, live Supabase writes, image uploads, or every public portfolio view.
+The automated suite covers Supabase token/session behavior and edit-form/project-save regressions. The production checks above were read-only. They do not prove Google OAuth completion, email delivery/resend, live Supabase writes, image uploads, or every public portfolio view.
 
 The UI screenshots are local prototype evidence with fictional demo data. They do not prove mobile breakpoints, keyboard-only operation, contrast, or real production data flow; those remain manual checks below.
 
