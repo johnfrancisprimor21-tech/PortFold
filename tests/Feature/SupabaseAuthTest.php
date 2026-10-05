@@ -46,6 +46,12 @@ class SupabaseAuthTest extends TestCase
             ->assertOk()
             ->assertSee('data-supabase-form="register"', false)
             ->assertSee('Use at least 12 characters.');
+
+        $this->get('/email/confirmation')
+            ->assertOk()
+            ->assertSee('Check your inbox')
+            ->assertSee('data-resend-confirmation', false)
+            ->assertSee('Return to sign in');
     }
 
     public function test_auth_callback_uses_https_behind_a_tls_terminating_proxy(): void

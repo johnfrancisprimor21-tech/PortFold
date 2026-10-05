@@ -107,6 +107,55 @@ if (configuration) {
         }
     }
 
+    const resendConfirmationButton = document.querySelector('[data-resend-confirmation]');
+    if (resendConfirmationButton) {
+        const pendingEmail = sessionStorage.getItem('portfold.pending-email') || '';
+        const emailDisplay = document.querySelector('[data-confirmation-email]');
+        const confirmationStatus = document.querySelector('[data-confirmation-status]');
+
+        if (emailDisplay && pendingEmail) {
+            const [localPart, domain] = pendingEmail.split('@');
+            const maskedLocalPart = localPart.length > 2
+                ? `${localPart.slice(0, 2)}${'•'.repeat(Math.min(localPart.length - 2, 8))}`
+                : `${localPart.slice(0, 1)}•`;
+            emailDisplay.textContent = domain ? `${maskedLocalPart}@${domain}` : 'your email address';
+        }
+
+        resendConfirmationButton.addEventListener('click', async () => {
+            if (!pendingEmail) {
+                confirmationStatus.textContent = 'Return to create account and enter your email address to request a new link.';
+                confirmationStatus.hidden = false;
+                return;
+            }
+
+            resendConfirmationButton.disabled = true;
+            resendConfirmationButton.setAttribute('aria-busy', 'true');
+            confirmationStatus.hidden = true;
+
+            try {
+                const { error } = await getClient().auth.resend({
+                    type: 'signup',
+                    email: pendingEmail,
+                    options: { emailRedirectTo: configuration.dataset.callbackUrl },
+                });
+
+                if (error) {
+                    throw error;
+                }
+
+                confirmationStatus.textContent = 'A new confirmation link is on its way. Check your inbox and spam folder.';
+                confirmationStatus.dataset.kind = 'success';
+            } catch (error) {
+                confirmationStatus.textContent = errorMessage(error, 'We could not resend the confirmation email. Wait a moment and try again.');
+                confirmationStatus.dataset.kind = 'error';
+            } finally {
+                confirmationStatus.hidden = false;
+                resendConfirmationButton.disabled = false;
+                resendConfirmationButton.removeAttribute('aria-busy');
+            }
+        });
+    }
+
     document.querySelectorAll('[data-supabase-form]').forEach((form) => {
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -169,7 +218,8 @@ if (configuration) {
                     if (data.session) {
                         await connectLaravelSession(data.session);
                     } else {
-                        setStatus('Check your inbox for the confirmation link to finish creating your account.');
+                        sessionStorage.setItem('portfold.pending-email', email);
+                        window.location.assign(configuration.dataset.confirmationUrl);
                     }
                 }
 

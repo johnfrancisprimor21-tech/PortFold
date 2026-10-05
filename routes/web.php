@@ -18,6 +18,7 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::get('/auth/callback', [AuthController::class, 'callback'])->name('auth.callback');
+Route::get('/email/confirmation', [AuthController::class, 'showEmailConfirmation'])->name('auth.email-confirmation');
 Route::post('/auth/supabase/session', [AuthController::class, 'establishSupabaseSession'])
     ->middleware('throttle:10,1')->name('auth.supabase.session');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');

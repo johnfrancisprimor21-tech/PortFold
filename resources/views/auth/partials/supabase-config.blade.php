@@ -5,6 +5,7 @@
     data-anon-key="{{ config('services.supabase.anon_key') }}"
     data-session-url="{{ route('auth.supabase.session') }}"
     data-callback-url="{{ route('auth.callback') }}"
+    data-confirmation-url="{{ route('auth.email-confirmation') }}"
     data-reset-url="{{ route('password.reset') }}"
     data-manage-url="{{ route('portfolio.manage') }}"
 ></div>

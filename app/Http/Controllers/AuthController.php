@@ -41,6 +41,11 @@ class AuthController extends Controller
         return view('auth.callback');
     }
 
+    public function showEmailConfirmation(): View
+    {
+        return view('auth.confirm-email');
+    }
+
     public function clientAuthFallback(): RedirectResponse
     {
         return back()->with('error', 'The secure account form did not load. Refresh the page and try again.');

@@ -135,3 +135,18 @@ The repository includes `Dockerfile` and `render.yaml` for a Render web service.
 
 - [Project documentation](docs/PROJECT-DOCUMENTATION.md) — overview, requirements mapping, data model, hosting, and submission checklist.
 - [QA checklist](docs/QA-CHECKLIST.md) — automated evidence, deployment smoke checks, and manual test cases.
+- [Prototype and issue log](docs/PROTOTYPE-AND-ISSUE-LOG.md) — design iterations, reported problems, and current verification status.
+
+## Template screenshots
+
+These screenshots use synthetic demo content (`Alex Rivera`, `example.test`) and do not show a real user's portfolio.
+
+| Simple — light | Simple — dark |
+| --- | --- |
+| ![Simple template in light mode](docs/screenshots/simple-light.jpg) | ![Simple template in dark mode](docs/screenshots/simple-dark.jpg) |
+
+| Modern — neomorphic | Creative — cosmic scene |
+| --- | --- |
+| ![Modern neomorphic template](docs/screenshots/modern.jpg) | ![Creative template with black-hole hero and floating skills](docs/screenshots/creative.jpg) |
+
+The account confirmation landing page also has a [screenshot](docs/screenshots/email-confirmation.jpg).
