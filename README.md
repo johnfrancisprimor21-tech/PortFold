@@ -1,58 +1,137 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# PortFold
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+PortFold is an online portfolio generator. A user enters their professional information, chooses one of three portfolio designs, previews the result, and can edit, delete, or export their portfolio.
 
-## About Laravel
+**Live site:** [https://portfold.onrender.com](https://portfold.onrender.com)
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+**Source code:** [https://github.com/johnfrancisprimor21-tech/PortFold](https://github.com/johnfrancisprimor21-tech/PortFold)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Features
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- Create a portfolio with a profile photo, contact details, location, biography, skills, education, experience, projects, and social links.
+- Choose from three distinct Blade templates: **Simple**, **Modern**, and **Creative**.
+- Preview a portfolio publicly and manage it from an authenticated account.
+- Edit and delete portfolios; portfolio owners are checked by the server.
+- Export portfolio data as JSON or download a rendered HTML snapshot.
+- Use Supabase Auth for account sessions and Supabase PostgreSQL for portfolio data. Supabase Storage stores profile and project images.
+- Switch theme where supported by the selected template.
 
-## Learning Laravel
+## Technology
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+| Area | Technology |
+| --- | --- |
+| Server application | PHP 8.3+, Laravel 13, Blade |
+| Frontend build | Vite 8, Tailwind CSS 4 |
+| Interactive creative scene | Three.js |
+| Authentication | Supabase Auth, including Google OAuth when configured |
+| Database | Supabase PostgreSQL |
+| Image storage | Supabase Storage |
+| Hosting | Render Docker web service |
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## User flow
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+1. Open the home page and sign in or create an account.
+2. Enter portfolio information and save it.
+3. Select Simple, Modern, or Creative.
+4. Preview and share the public portfolio page.
+5. Return to Manage to edit, delete, or export the portfolio.
 
-## Agentic Development
+Portfolio creation and management require an authenticated account. Public portfolio pages are read-only.
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Local development
 
-```bash
-composer require laravel/boost --dev
+### Prerequisites
 
-php artisan boost:install
+- PHP 8.3 or newer with the extensions required by Laravel and PostgreSQL.
+- Composer.
+- Node.js and npm.
+- Access to a Supabase project configured with the PortFold database schema, Auth, and Storage buckets.
+
+### Setup
+
+```powershell
+composer install
+Copy-Item .env.example .env
+php artisan key:generate
+npm ci
+npm run build
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Set the local environment values in `.env` before starting the application. Do not use production credentials for local development or commit `.env`.
 
-## Contributing
+```powershell
+php artisan serve
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Open `http://127.0.0.1:8000`.
 
-## Code of Conduct
+### Database setup caveat
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+The hosted Supabase database is already provisioned, but the repository currently does **not** contain migrations that create all portfolio-domain tables (`templates`, `portfolios`, `portfolio_info`, `skills`, `projects`, `education`, `experiences`, and `links`). The ownership migration expects the existing `portfolios` table. `DatabaseSeeder` inserts the three template rows only after the `templates` table exists.
 
-## Security Vulnerabilities
+For a fresh database, `php artisan migrate` alone is therefore not a complete setup. Use the established Supabase schema, and verify or add versioned migrations/schema setup before expecting a clean installation to work. See [Project documentation](docs/PROJECT-DOCUMENTATION.md) for the current logical data model and [QA checklist](docs/QA-CHECKLIST.md) for the checks that remain.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Configuration
 
-## License
+Configure these values in the local `.env` or the hosting provider's private environment-variable settings. The repository intentionally contains no live values.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+| Variable | Purpose |
+| --- | --- |
+| `APP_KEY` | Laravel encryption key |
+| `APP_URL` | Canonical app URL |
+| `DB_CONNECTION` | Set to `pgsql` for Supabase PostgreSQL |
+| `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | PostgreSQL connection settings |
+| `DB_SSLMODE` | PostgreSQL TLS mode; the hosted configuration uses `require` |
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Public Supabase key used by the browser auth client |
+| `SUPABASE_SERVICE_KEY` | Server-only key used by trusted server storage operations |
+| `SESSION_DRIVER`, `SESSION_ENCRYPT`, `SESSION_SECURE_COOKIE` | Session storage and cookie settings |
+
+Never expose `SUPABASE_SERVICE_KEY`, database credentials, or `APP_KEY` to browser code, source control, screenshots, or project submissions. `.env` is ignored by Git. Use only the public/anon key in browser configuration.
+
+### Google sign-in
+
+Google sign-in requires Google OAuth credentials configured in Supabase Auth. Register the Supabase Auth callback shown in the Supabase provider settings with Google Cloud. Set Supabase's application Site URL to the deployed PortFold URL and allow `https://portfold.onrender.com/auth/callback` as a redirect URL. If the Google consent screen remains in Testing mode, add the evaluator's Google account as a test user.
+
+## Database overview
+
+The logical data model is:
+
+```mermaid
+erDiagram
+    USERS ||--o{ PORTFOLIOS : owns
+    TEMPLATES ||--o{ PORTFOLIOS : styles
+    PORTFOLIOS ||--|| PORTFOLIO_INFO : contains
+    PORTFOLIOS ||--o{ SKILLS : has
+    PORTFOLIOS ||--o{ PROJECTS : showcases
+    PORTFOLIOS ||--o{ EXPERIENCES : records
+    PORTFOLIOS ||--o{ EDUCATION : records
+    PORTFOLIOS ||--o{ LINKS : exposes
+```
+
+This diagram describes the relationships used by the application. It is not a substitute for a checked-in migration or a schema dump: verify actual foreign keys, uniqueness, nullability, and delete behavior in Supabase. The documented field summary is in [Project documentation](docs/PROJECT-DOCUMENTATION.md).
+
+## Tests and build
+
+Run the existing automated suite:
+
+```powershell
+php artisan test
+```
+
+Build frontend assets:
+
+```powershell
+npm run build
+```
+
+The test suite includes Supabase-authentication checks and portfolio edit/save regression checks. A passing local suite does not prove that production Google OAuth, Supabase Storage, or every live database operation works; use the [QA checklist](docs/QA-CHECKLIST.md) for the manual release walkthrough.
+
+## Deployment
+
+The repository includes `Dockerfile` and `render.yaml` for a Render web service. The service is configured to build the Vite assets, use Supabase PostgreSQL over TLS, and expose Laravel's `/up` health endpoint. Render's environment variables must be configured privately. Confirm the domain and Supabase redirect settings after deployment.
+
+## Project and QA documents
+
+- [Project documentation](docs/PROJECT-DOCUMENTATION.md) — overview, requirements mapping, data model, hosting, and submission checklist.
+- [QA checklist](docs/QA-CHECKLIST.md) — automated evidence, deployment smoke checks, and manual test cases.
