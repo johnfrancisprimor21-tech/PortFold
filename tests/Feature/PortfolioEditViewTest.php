@@ -167,6 +167,7 @@ class PortfolioEditViewTest extends TestCase
             $table->string('slug');
             $table->string('status');
             $table->timestampTz('updated_at')->nullable();
+            $table->timestampTz('deleted_at')->nullable();
         });
         Schema::create('portfolio_info', function (Blueprint $table): void {
             $table->uuid('id')->primary();

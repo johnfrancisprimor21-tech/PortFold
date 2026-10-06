@@ -32,6 +32,8 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/portfolio/{id}/export/html', [PortfolioController::class, 'exportHtml'])->middleware('throttle:5,1')->name('portfolio.export.html');
     Route::put('/portfolio/{id}', [PortfolioController::class, 'update'])->middleware('throttle:10,1')->name('portfolio.update');
     Route::delete('/portfolio/{id}', [PortfolioController::class, 'destroy'])->middleware('throttle:5,1')->name('portfolio.destroy');
+    Route::post('/portfolio/{id}/restore', [PortfolioController::class, 'restore'])->middleware('throttle:10,1')->name('portfolio.restore');
+    Route::delete('/portfolio/{id}/permanent', [PortfolioController::class, 'permanentlyDelete'])->middleware('throttle:5,1')->name('portfolio.permanent-delete');
     Route::get('/portfolio/{id}/template', [PortfolioController::class, 'selectTemplate'])->name('portfolio.template');
     Route::post('/portfolio/{id}/template', [PortfolioController::class, 'applyTemplate'])->middleware('throttle:10,1')->name('portfolio.applyTemplate');
     Route::get('/manage', [PortfolioController::class, 'manage'])->name('portfolio.manage');

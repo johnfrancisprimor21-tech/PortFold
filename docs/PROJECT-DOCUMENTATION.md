@@ -6,7 +6,7 @@
 | --- | --- |
 | Project title | PortFold — Online Portfolio Template Generator |
 | Student / team | Primor John Francis C. |
-| Description | A web application for creating, saving, previewing, managing, and exporting personal portfolios using three selectable templates. |
+| Description | A web application for creating, saving, previewing, managing, and exporting personal portfolios using three selectable templates, with recoverable Trash and optional permanent deletion. |
 | Published website | [https://portfold.onrender.com](https://portfold.onrender.com) |
 | Source code | [https://github.com/johnfrancisprimor21-tech/PortFold](https://github.com/johnfrancisprimor21-tech/PortFold) |
 | Hosting | Render web service, Docker runtime |
@@ -17,7 +17,7 @@ Do not add passwords, API secrets, database connection strings, or service-role 
 
 ## Project description
 
-PortFold helps people publish a portfolio without hand-coding a personal website. A signed-in user enters profile and career information, selects a visual template, previews the result, and later manages or exports the saved portfolio. The application is deployed at the public URL above; portfolio creation and management require an authenticated account, while generated portfolio pages are public and read-only.
+PortFold helps people publish a portfolio without hand-coding a personal website. A signed-in user enters profile and career information, selects a visual template, previews the result, and later manages or exports the saved portfolio. Portfolio creation and management require an authenticated account, while generated portfolio pages are public and read-only. A public URL is a share link, not access control: a visitor who has the URL can read its page without signing in. Sensitive content should not be placed in a portfolio.
 
 ## Requirements mapping
 
@@ -27,7 +27,7 @@ PortFold helps people publish a portfolio without hand-coding a personal website
 | Provide exactly three noticeably different templates | Simple, Modern, and Creative Blade views are available. `DatabaseSeeder` adds those template rows when the `templates` table is present. |
 | Save and retrieve information online | Laravel uses the configured Supabase PostgreSQL connection; uploaded images use Supabase Storage. |
 | Select a template and preview the generated portfolio | Template selection saves the chosen template; the preview/public routes render that Blade template. |
-| Edit and delete portfolio information | Authenticated owner routes provide edit/update/delete and the manage page. |
+| Edit and delete portfolio information | Authenticated owner routes provide edit/update, move-to-Trash, restore, and permanent-delete actions from the Manage page. |
 | Publish the system with a working URL | The Render service and public URL are configured. Application code from commit `393a6a9` passed the latest verified Render deployment after the `/up` health-check path was aligned. See the deployment status below and QA checklist. |
 | Provide readable, organized, responsive UI | The layouts use mobile breakpoints, visible focus styles, semantic labels, field feedback, and reduced-motion handling. Verify the manual checks in `QA-CHECKLIST.md` before claiming complete accessibility or device coverage. |
 | Submit source code, project documentation, and screenshots | The repository includes this report, QA checklist, prototype/issue log, and desktop captures of Simple (light and dark), Modern, Creative, and the email-confirmation screen. The captures use synthetic data. |
@@ -39,9 +39,9 @@ PortFold helps people publish a portfolio without hand-coding a personal website
 3. Enter portfolio details and save them.
 4. Select Simple, Modern, or Creative.
 5. Preview the generated portfolio and use its public page URL.
-6. Return to Manage to edit, delete, or export the portfolio.
+6. Return to Manage to edit, move the portfolio to Trash, restore it, permanently delete it, or export it.
 
-The creation, edit, management, and export actions require the signed-in user to own the portfolio. Public portfolio routes are intended for viewing only.
+The create, edit, manage, export, Trash, restore, and permanent-delete actions require the signed-in user to own the portfolio. Public portfolio routes are intended for viewing only. Moving an item to Trash sets `portfolios.deleted_at` and retains child rows and uploaded images; restore clears that timestamp. Permanent deletion is available only for trashed records and removes the associated domain rows and unshared Storage objects. Storage APIs and PostgreSQL do not provide one shared transaction, so an interrupted storage cleanup can leave some images removed while the portfolio remains in Trash for another attempt.
 
 ## Pages and routes
 
@@ -58,14 +58,16 @@ The creation, edit, management, and export actions require the signed-in user to
 | Public portfolio page | `/portfolio/{id}` |
 | Manage portfolios | `/manage` |
 | Edit portfolio | `/portfolio/{id}/edit` |
-| Save edits / delete | `PUT /portfolio/{id}`, `DELETE /portfolio/{id}` |
+| Save edits / move to Trash | `PUT /portfolio/{id}`, `DELETE /portfolio/{id}` |
+| Restore from Trash | `POST /portfolio/{id}/restore` |
+| Permanently delete a trashed portfolio | `DELETE /portfolio/{id}/permanent` |
 | Download JSON / HTML | `/portfolio/{id}/export`, `/portfolio/{id}/export/html` |
 
 ## Portfolio templates
 
 - **Simple:** clean, professional presentation with theme support and a focus on readable profile details.
 - **Modern:** card- and section-based portfolio with visual hierarchy and interactive details.
-- **Creative:** expressive layout with a Three.js hero scene and floating skill visuals.
+- **Creative:** an interactive gaming-workstation hero scene rendered with Three.js. Visitors can explore the 3D scene, orbit and zoom the camera, switch between front and rear views, open the interactive desktop, and navigate to portfolio sections.
 
 The screenshots below were captured from the app using synthetic demo content. They document the current visual prototypes and the email-confirmation screen, not a usability study or cross-device certification.
 
@@ -74,10 +76,11 @@ The screenshots below were captured from the app using synthetic demo content. T
 | Simple template — light mode | [simple-light.jpg](screenshots/simple-light.jpg) |
 | Simple template — dark mode | [simple-dark.jpg](screenshots/simple-dark.jpg) |
 | Modern template — neomorphism | [modern.jpg](screenshots/modern.jpg) |
-| Creative template — cosmic black-hole scene and floating skill orbit | [creative.jpg](screenshots/creative.jpg) |
+| Creative template — interactive gaming-workstation scene | [creative.jpg](screenshots/creative.jpg) |
+| Manage page — recoverable Trash and permanent-delete control | [manage-trash.jpg](screenshots/manage-trash.jpg) |
 | Email confirmation landing page | [email-confirmation.jpg](screenshots/email-confirmation.jpg) |
 
-The portfolio captures use a fictional name, `example.test` email, and reserved example phone number. The confirmation capture shows the empty state; the page masks the address when reached after registration in the same browser session. Capture a mobile view as well if the instructor requests responsive evidence.
+The portfolio captures use synthetic data. The confirmation capture shows the empty state; the page masks the address when reached after registration in the same browser session. Screenshots document selected UI states and do not certify mobile responsiveness or feature behavior; see the QA checklist.
 
 ## Technologies used
 
@@ -97,22 +100,31 @@ The following is the **logical structure used by the application**, based on its
 | Table | Purpose | Application fields in use |
 | --- | --- | --- |
 | `users` | Supabase-authenticated account profile | `id` (UUID), `full_name`, `email`, `avatar_url`, `created_at` |
-| `portfolios` | Portfolio ownership, public slug, and selected template | `id`, `user_id`, `template_id`, `slug`, `status`, `updated_at` |
+| `portfolios` | Portfolio ownership, public slug, selected template, and Trash state | `id`, `user_id`, `template_id`, `slug`, `status`, `updated_at`, `deleted_at` |
 | `templates` | Available portfolio designs | `id`, `name`, `slug`, `category`, `style_tags` |
 | `portfolio_info` | Personal and contact details | `id`, `portfolio_id`, `full_name`, `headline`, `bio`, `location`, `contact_email`, `phone`, `photo_url` |
-| `skills` | Portfolio skill names | `id`, `portfolio_id`, `name` |
-| `projects` | Project content and ordering | `id`, `portfolio_id`, `title`, `description`, `live_url`, `repo_url`, `screenshot_url`, `display_order` |
+| `skills` | Portfolio skill names and optional grouping/proficiency metadata | `id`, `portfolio_id`, `name`, `category`, `proficiency` |
+| `projects` | Project content, legacy/current image URL references, and ordering | `id`, `portfolio_id`, `title`, `description`, `live_url`, `repo_url`, `image_url`, `screenshot_url`, `display_order` |
 | `experiences` | Work history | `id`, `portfolio_id`, `role`, `company`, `start_date`, `end_date`, `description`, `is_internship` |
 | `education` | Education history | `id`, `portfolio_id`, `institution`, `degree`, `field`, `start_year`, `end_year` |
 | `links` | Social media and website links | `id`, `portfolio_id`, `platform`, `url` |
+| `github_stats` | Optional GitHub profile snapshot | `id`, `portfolio_id`, `github_username`, `public_repos`, `followers`, `pinned_repos`, `synced_at` |
 
-Logical relationships: a user owns portfolios; each portfolio selects a template, has its profile information, and may have multiple skills, projects, experiences, education entries, and links.
+Logical relationships: a user owns portfolios; each portfolio selects a template, has its profile information, and may have multiple skills, projects, experiences, education entries, links, and an optional GitHub statistics record. `deleted_at` is a nullable soft-delete timestamp: null means active, non-null means in Trash.
+
+### Supabase schema snapshot — 2026-10-06
+
+The live Supabase schema was inspected through metadata only; no portfolio or account rows were read. The inspected public tables included `cache`, `cache_locks`, `education`, `experiences`, `failed_jobs`, `github_stats`, `job_batches`, `jobs`, `links`, `portfolio_info`, `portfolios`, `projects`, `sessions`, `skills`, `templates`, and `users`. Supabase-managed Auth tables are in the separate `auth` schema.
+
+Metadata confirmed the `deleted_at` column as nullable `timestamp with time zone`. The inspected foreign keys connect `portfolio_info`, `skills`, `projects`, `experiences`, `education`, `links`, and `github_stats` to `portfolios.id` with `ON DELETE CASCADE`; `portfolios.user_id` connects to `users.id` with `ON DELETE CASCADE`; `portfolios.template_id` connects to `templates.id` with `ON DELETE NO ACTION`; and `users.id` connects to `auth.users.id` with `ON DELETE CASCADE`. Inspected uniqueness includes user email, template slug, portfolio slug, one `portfolio_info` row per portfolio, and one `github_stats` row per portfolio. RLS was disabled on the inspected public tables at the time of inspection.
+
+This snapshot is a point-in-time description of the hosted database, not a reproducible schema definition. The `projects.image_url` column was present as well as `screenshot_url`; the current code writes/reads `screenshot_url`, while permanent-delete cleanup checks both columns to cover older rows. `github_stats` is present in the schema and is cleaned up on permanent deletion, but it is not currently a user-facing feature. Reinspect after schema changes and before setting up another environment.
 
 ### Database setup limitation to resolve
 
-The repository contains migrations for the users/session tables and portfolio ownership, but it does not currently contain create-table migrations for the portfolio-domain tables listed above. The ownership migration expects `portfolios` to exist. The seeder adds Simple, Modern, and Creative records only when the `templates` table already exists. The production Supabase schema is already in use, but a fresh database cannot be recreated from the tracked migrations alone.
+The repository contains migrations for the users/session tables and portfolio ownership, plus a migration that adds nullable `portfolios.deleted_at` and its index. It does not contain create-table migrations for the portfolio-domain tables listed above. The ownership and soft-delete migrations expect `portfolios` to exist. The seeder adds Simple, Modern, and Creative records only when the `templates` table already exists. The production Supabase schema is already in use, but a fresh database cannot be recreated from the tracked migrations alone.
 
-Before presenting this as a reproducible database design, verify the actual Supabase columns, primary/foreign keys, unique constraints, nullability, and delete behavior, then add a versioned schema migration or a safe, documented SQL setup script to the source repository. Never export production records or credentials in that script. The current QA checklist marks this as a release/submission follow-up.
+The checked Supabase metadata snapshot is described above, but a versioned baseline schema or safe setup script is still required for a reproducible database. Never export production records or credentials in that script. The current QA checklist marks this as a release/submission follow-up.
 
 ## Hosting and deployment
 
@@ -134,7 +146,7 @@ The Render free instance may spin down when idle, which can delay the first requ
 - **Consistency and recognition:** navigation, section labels, and template names stay visible across the portfolio flow.
 - **Accessibility support:** semantic labels, keyboard focus indicators, accessible status/error text, responsive layouts, and reduced-motion rules are present in the code.
 
-These are implementation measures, not a completed usability study. Complete the keyboard, mobile, and readability steps in the QA checklist and record any issues before submission.
+These are implementation measures, not a completed usability study. Mobile preview readability and small-screen interaction issues were reported during prototyping and remain unverified. Complete the keyboard, mobile, and readability steps in the QA checklist and record any issues before submission.
 
 ## Security and privacy
 
@@ -151,6 +163,7 @@ These are implementation measures, not a completed usability study. Complete the
 - [x] Database platform and hosting platform are named.
 - [x] Project description and technology stack are documented.
 - [x] Logical database entities and relationships are documented.
+- [x] Trash, restore, permanent-delete behavior, and the checked Supabase schema snapshot are documented.
 - [ ] Add reproducible migrations or a safe schema setup script for all portfolio-domain tables.
 - [x] Add desktop screenshots of Simple (light and dark), Modern, and Creative using synthetic demo content.
 - [x] Add a screenshot of the email confirmation landing page.

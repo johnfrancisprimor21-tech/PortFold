@@ -47,13 +47,17 @@ class PortfolioController extends Controller
     }
 
     /** Remove only objects in this app's known public Supabase buckets. */
-    private function deleteSupabaseObjects(array $urls): void
+    private function deleteSupabaseObjects(array $urls): bool
     {
+        if ($urls === []) {
+            return true;
+        }
+
         $projectUrl = rtrim((string) config('services.supabase.url'), '/');
         $serviceKey = (string) config('services.supabase.service_key');
         $projectHost = parse_url($projectUrl, PHP_URL_HOST);
-        if ($projectUrl === '' || $serviceKey === '' || ! is_string($projectHost)) {
-            return;
+        if ($projectUrl === '' || ! is_string($projectHost)) {
+            return false;
         }
 
         $objects = ['avatars' => [], 'projects' => []];
@@ -85,6 +89,15 @@ class PortfolioController extends Controller
             $objects[$bucket][] = $objectPath;
         }
 
+        if ($objects['avatars'] === [] && $objects['projects'] === []) {
+            return true;
+        }
+
+        if ($serviceKey === '') {
+            return false;
+        }
+
+        $cleanupSucceeded = true;
         foreach ($objects as $bucket => $paths) {
             $paths = array_values(array_unique($paths));
             if ($paths === []) {
@@ -101,6 +114,7 @@ class PortfolioController extends Controller
                 ]);
 
                 if (! $response->successful()) {
+                    $cleanupSucceeded = false;
                     Log::warning('Supabase portfolio asset cleanup failed.', [
                         'bucket' => $bucket,
                         'object_count' => count($paths),
@@ -108,6 +122,7 @@ class PortfolioController extends Controller
                     ]);
                 }
             } catch (\Throwable $exception) {
+                $cleanupSucceeded = false;
                 Log::warning('Supabase portfolio asset cleanup request failed.', [
                     'bucket' => $bucket,
                     'object_count' => count($paths),
@@ -115,6 +130,8 @@ class PortfolioController extends Controller
                 ]);
             }
         }
+
+        return $cleanupSucceeded;
     }
 
     // Same rules for create and edit so both behave the same
@@ -160,6 +177,7 @@ class PortfolioController extends Controller
         return DB::table('portfolios')
             ->where('id', $id)
             ->where('user_id', Auth::id())
+            ->whereNull('deleted_at')
             ->firstOrFail();
     }
 
@@ -423,7 +441,10 @@ class PortfolioController extends Controller
     // -------------------------------------------------------
     public function preview($id): Response
     {
-        $portfolio = DB::table('portfolios')->where('id', $id)->firstOrFail();
+        $portfolio = DB::table('portfolios')
+            ->where('id', $id)
+            ->whereNull('deleted_at')
+            ->firstOrFail();
         $template = DB::table('templates')->where('id', $portfolio->template_id)->first();
         $info = DB::table('portfolio_info')->where('portfolio_id', $id)->first();
         $skills = DB::table('skills')->where('portfolio_id', $id)->get();
@@ -764,31 +785,115 @@ class PortfolioController extends Controller
     }
 
     // -------------------------------------------------------
-    // Delete portfolio
+    // Move portfolio to Trash without removing its data or uploaded assets.
     // -------------------------------------------------------
     public function destroy($id): RedirectResponse
     {
         $this->ownedPortfolio((string) $id);
-        $storedUrls = array_filter(array_merge(
-            [DB::table('portfolio_info')->where('portfolio_id', $id)->value('photo_url')],
-            DB::table('projects')->where('portfolio_id', $id)->whereNotNull('screenshot_url')->pluck('screenshot_url')->all()
-        ));
+        DB::table('portfolios')
+            ->where('id', $id)
+            ->where('user_id', Auth::id())
+            ->whereNull('deleted_at')
+            ->update([
+                'deleted_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-        DB::transaction(function () use ($id): void {
-            foreach (['portfolio_info', 'skills', 'projects', 'education', 'experiences', 'links'] as $table) {
-                DB::table($table)->where('portfolio_id', $id)->delete();
+        return redirect()->route('portfolio.manage')
+            ->with('success', 'Portfolio moved to Trash. Its content and images are kept, and you can restore it any time.');
+    }
+
+    public function restore($id): RedirectResponse
+    {
+        $portfolio = DB::table('portfolios')
+            ->where('id', $id)
+            ->where('user_id', Auth::id())
+            ->whereNotNull('deleted_at')
+            ->firstOrFail();
+
+        DB::table('portfolios')
+            ->where('id', $portfolio->id)
+            ->where('user_id', Auth::id())
+            ->whereNotNull('deleted_at')
+            ->update([
+                'deleted_at' => null,
+                'updated_at' => now(),
+            ]);
+
+        return redirect()->route('portfolio.manage')
+            ->with('success', 'Portfolio restored. Its public link is active again.');
+    }
+
+    public function permanentlyDelete($id): RedirectResponse
+    {
+        $userId = Auth::id();
+
+        $deleted = DB::transaction(function () use ($id, $userId): bool {
+            $portfolio = DB::table('portfolios')
+                ->where('id', $id)
+                ->where('user_id', $userId)
+                ->whereNotNull('deleted_at')
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $info = DB::table('portfolio_info')->where('portfolio_id', $portfolio->id)->first();
+            $projectImageUrls = DB::table('projects')
+                ->where('portfolio_id', $portfolio->id)
+                ->get(['image_url', 'screenshot_url'])
+                ->flatMap(fn ($project) => [$project->image_url, $project->screenshot_url])
+                ->filter()
+                ->all();
+            $assetUrls = array_values(array_filter(array_merge([
+                $info->photo_url ?? null,
+            ], $projectImageUrls)));
+
+            if ($assetUrls !== []) {
+                $assetUrls = array_values(array_unique($assetUrls));
+                $sharedAssetUrls = DB::table('portfolio_info')
+                    ->where('portfolio_id', '<>', $portfolio->id)
+                    ->whereIn('photo_url', $assetUrls)
+                    ->pluck('photo_url')
+                    ->merge(DB::table('projects')
+                        ->where('portfolio_id', '<>', $portfolio->id)
+                        ->where(function ($query) use ($assetUrls): void {
+                            $query->whereIn('image_url', $assetUrls)
+                                ->orWhereIn('screenshot_url', $assetUrls);
+                        })
+                        ->get(['image_url', 'screenshot_url'])
+                        ->flatMap(fn ($project) => [$project->image_url, $project->screenshot_url]))
+                    ->unique()
+                    ->all();
+                $assetUrls = array_values(array_diff($assetUrls, $sharedAssetUrls));
+            }
+
+            if (! $this->deleteSupabaseObjects($assetUrls)) {
+                return false;
+            }
+
+            foreach (['skills', 'projects', 'education', 'experiences', 'links', 'github_stats', 'portfolio_info'] as $table) {
+                DB::table($table)->where('portfolio_id', $portfolio->id)->delete();
             }
 
             DB::table('portfolios')
-                ->where('id', $id)
-                ->where('user_id', Auth::id())
+                ->where('id', $portfolio->id)
+                ->where('user_id', $userId)
+                ->whereNotNull('deleted_at')
                 ->delete();
+
+            return true;
         });
 
-        $this->deleteSupabaseObjects($storedUrls);
+        if (! $deleted) {
+            return redirect()->route('portfolio.manage')->with(
+                'error',
+                'Storage cleanup did not complete. The portfolio remains in Trash so you can try again. Some files may already have been removed.'
+            );
+        }
 
-        return redirect()->route('portfolio.manage')
-            ->with('success', 'Portfolio deleted.');
+        return redirect()->route('portfolio.manage')->with(
+            'success',
+            'Portfolio and its content were permanently deleted.'
+        );
     }
 
     // -------------------------------------------------------
@@ -796,23 +901,34 @@ class PortfolioController extends Controller
     // -------------------------------------------------------
     public function manage(): View
     {
-        $portfolios = DB::table('portfolios')
-            ->where('portfolios.user_id', Auth::id())
-            ->join('portfolio_info', 'portfolios.id', '=', 'portfolio_info.portfolio_id')
-            ->join('templates', 'portfolios.template_id', '=', 'templates.id')
-            ->select(
-                'portfolios.id',
-                'portfolios.slug',
-                'portfolios.status',
-                'portfolios.updated_at',
-                'portfolio_info.full_name',
-                'portfolio_info.headline',
-                'templates.name as template_name',
-                'templates.slug as template_slug'
-            )
+        $portfolioQuery = function (bool $trashed) {
+            return DB::table('portfolios')
+                ->where('portfolios.user_id', Auth::id())
+                ->when($trashed,
+                    fn ($query) => $query->whereNotNull('portfolios.deleted_at'),
+                    fn ($query) => $query->whereNull('portfolios.deleted_at'))
+                ->join('portfolio_info', 'portfolios.id', '=', 'portfolio_info.portfolio_id')
+                ->join('templates', 'portfolios.template_id', '=', 'templates.id')
+                ->select(
+                    'portfolios.id',
+                    'portfolios.slug',
+                    'portfolios.status',
+                    'portfolios.updated_at',
+                    'portfolios.deleted_at',
+                    'portfolio_info.full_name',
+                    'portfolio_info.headline',
+                    'templates.name as template_name',
+                    'templates.slug as template_slug'
+                );
+        };
+
+        $portfolios = $portfolioQuery(false)
             ->orderByDesc('portfolios.updated_at')
             ->paginate(25);
+        $trashedPortfolios = $portfolioQuery(true)
+            ->orderByDesc('portfolios.deleted_at')
+            ->paginate(25, ['*'], 'trash_page');
 
-        return view('portfolio.manage', compact('portfolios'));
+        return view('portfolio.manage', compact('portfolios', 'trashedPortfolios'));
     }
 }

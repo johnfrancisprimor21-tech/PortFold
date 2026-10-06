@@ -2,6 +2,20 @@
 
 Use this checklist before a class demonstration or release. **Pending** means the check has not been verified yet; it does not by itself mean the feature is broken. Use a dedicated test account and disposable portfolio for any live write/delete checks. Do not use a real user's portfolio as test data.
 
+## Current change — recoverable deletion and permanent delete
+
+The implementation adds a nullable `portfolios.deleted_at` column, a Trash view, Restore, and a throttled permanent-delete route for portfolios already in Trash. The migration has been applied to the connected Supabase database, and the application changes are prepared for the repository. The checks recorded below predate this feature; the permanent-delete flow has **not** been exercised end to end against a disposable portfolio. Do not use a personal portfolio for this check.
+
+- [ ] Move a disposable portfolio to Trash; confirm its profile, child records, and uploaded images remain available for restoration.
+- [ ] Open its public and preview URLs while trashed; confirm both are not found.
+- [ ] Restore it; confirm the content, images, and public URL are back.
+- [ ] Move it to Trash again and permanently delete it; confirm the portfolio and related rows are removed and the Trash entry disappears.
+- [ ] Confirm its unshared profile/project Storage objects are removed, while an image URL reused by another portfolio remains intact.
+- [ ] Retry permanent deletion after simulating/observing a Storage API failure; confirm the portfolio remains in Trash and the error explains that some files may already have been removed.
+- [ ] Try the permanent-delete route as a different account and against an active portfolio; confirm neither is deleted.
+
+Storage and PostgreSQL do not share a transaction. If Storage cleanup partially succeeds or a later database operation fails, some files may already be gone while the portfolio record stays in Trash. The operation reports failure so the owner can retry. The UI requires a browser confirmation and the server limits the permanent-delete route to five attempts per minute.
+
 ## Verification already completed
 
 Checked on 2026-10-05:
@@ -16,12 +30,12 @@ Checked on 2026-10-05:
 - [x] After that deploy, read-only GET checks for `/`, `/up`, `/login`, `/register`, and `/email/confirmation` returned HTTP 200.
 - [x] Guest request to `/portfolio/create` — HTTP 302, confirming the authenticated route redirects a signed-out visitor to sign-in.
 - [x] Confirmed the repository has three template views and the seeder entries are Simple, Modern, and Creative.
-- [x] Captured and visually reviewed synthetic-data screenshots for Simple light/dark, Modern, Creative, and the email-confirmation landing page; files are in `docs/screenshots/`.
+- [x] Captured and visually reviewed synthetic-data screenshots for Simple light/dark, Modern, Creative, Manage/Trash, and the email-confirmation landing page; files are in `docs/screenshots/`.
 - [x] Added a dedicated email-confirmation landing page with next steps, a resend action, and navigation back to sign-in or registration. Automated feature test confirms the route and key controls render.
 
 The automated suite covers Supabase token/session behavior and edit-form/project-save regressions. The production checks above were read-only. They do not prove Google OAuth completion, email delivery/resend, live Supabase writes, image uploads, or every public portfolio view.
 
-The UI screenshots are local prototype evidence with fictional demo data. They do not prove mobile breakpoints, keyboard-only operation, contrast, or real production data flow; those remain manual checks below.
+The UI screenshots use synthetic demo data. They do not prove mobile breakpoints, keyboard-only operation, contrast, or real production data flow; those remain manual checks below. The Creative and Manage/Trash captures document their current visual states only.
 
 ## Manual release checks
 
@@ -52,7 +66,10 @@ The UI screenshots are local prototype evidence with fictional demo data. They d
 - [ ] Trigger a validation error; confirm the form identifies the field and retains entered project text.
 - [ ] Download JSON; confirm it is valid JSON and includes the expected profile, skills, projects, education, experience, links, and selected template.
 - [ ] Download HTML; open the file locally and verify the content. Note whether remote fonts, icons, images, or other assets require an internet connection.
-- [ ] Delete the disposable portfolio and verify it disappears from Manage and its public URL no longer displays it.
+- [ ] Move the disposable portfolio to Trash and verify it leaves the active list, remains restorable, and its public URL no longer displays it.
+- [ ] Restore the disposable portfolio and verify it returns to the active list and its public URL is active again.
+- [ ] Permanently delete only the disposable portfolio after restore behavior is confirmed; verify it leaves Trash, its domain rows are gone, and only its unshared Storage objects are removed.
+- [ ] Verify that the page warns permanent deletion cannot be undone and the browser asks for confirmation.
 
 ### Usability and HCI
 
@@ -67,7 +84,7 @@ The UI screenshots are local prototype evidence with fictional demo data. They d
 ### Database and deployment
 
 - [ ] Confirm the deployed app uses Supabase PostgreSQL, not a local SQLite database.
-- [ ] Verify the actual Supabase table and constraint metadata against the logical model in `PROJECT-DOCUMENTATION.md`.
+- [x] Read-only Supabase metadata snapshot recorded in `PROJECT-DOCUMENTATION.md` on 2026-10-06; recheck after schema changes.
 - [ ] Add migrations or a safe schema setup procedure that can provision the portfolio-domain tables on a fresh database.
 - [ ] Confirm the Simple, Modern, and Creative template records exist exactly once in the configured database.
 - [x] Confirmed at 11:50 on 2026-10-05: Render marked deployment `393a6a9` live, and the `/up` HTTP health check passed. Retest after any future deployment.
@@ -88,6 +105,8 @@ Record the date, commit, results, and any failures here before the final submiss
 | Date | Commit | Automated test result | Build result | Tester / notes |
 | --- | --- | --- | --- | --- |
 | 2026-10-05 | commit `393a6a9` (deployed) | 13 passed; 82 assertions in the prior run; not rerun for documentation-only changes | `npm run build` succeeded in the prior run; optional fontaine and large Creative chunk warnings | Render health path aligned to `/up`; retry deployed in 46.6s. External GET smoke checks for `/`, `/up`, `/login`, `/register`, and `/email/confirmation` returned HTTP 200. Template and confirmation screenshots use synthetic content. |
+
+These results are historical evidence for the listed commit. They do not cover the 2026-10-06 recoverable/permanent-delete change. No automated suite or live destructive acceptance check has been run for that change in this update.
 
 ## Final sign-off
 
