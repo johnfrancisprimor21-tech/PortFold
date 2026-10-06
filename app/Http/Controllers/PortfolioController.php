@@ -524,7 +524,7 @@ class PortfolioController extends Controller
             'portfolio', 'template', 'info', 'skills', 'projects', 'education', 'experiences', 'links'
         ))->render();
 
-        if ($template->slug === 'creative') {
+        if ($template->slug === 'creative' && str_contains($html, 'data-creative-scene')) {
             $html = $this->inlineCreativeHeroScript($html);
         }
 

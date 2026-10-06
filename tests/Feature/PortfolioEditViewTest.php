@@ -31,6 +31,24 @@ class PortfolioEditViewTest extends TestCase
         $this->assertStringContainsString('enctype="multipart/form-data"', $form);
         $this->assertStringContainsString('name="_method" value="PUT"', $form);
         $this->assertStringContainsString('name="_token"', $form);
+        $this->assertStringContainsString('href="'.route('portfolio.export.html', $portfolioId).'"', $html);
+    }
+
+    public function test_owner_can_download_a_standalone_creative_html_export(): void
+    {
+        [$user, $portfolioId] = $this->createOwnedPortfolio();
+
+        $response = $this->actingAs($user)->get(route('portfolio.export.html', $portfolioId));
+        $html = (string) $response->getContent();
+
+        $response->assertOk()
+            ->assertHeader('Content-Type', 'text/html; charset=utf-8')
+            ->assertHeader('Content-Disposition', 'attachment; filename="test-portfolio-owner-portfolio.html"');
+        $this->assertStringContainsString('Test Portfolio Owner', $html);
+        $this->assertStringContainsString('os-blackhole__disk', $html);
+        $this->assertStringContainsString('data-creative-scene', $html);
+        $this->assertStringContainsString('WebGLRenderer', $html);
+        $this->assertDoesNotMatchRegularExpression('~<script\\b[^>]*\\bsrc=["\'][^"\']*creative-hero[^"\']*["\']~i', $html);
     }
 
     public function test_invalid_save_keeps_added_project_text_in_the_edit_form(): void
@@ -105,6 +123,7 @@ class PortfolioEditViewTest extends TestCase
         DB::table('portfolios')->insert([
             'id' => $portfolioId,
             'user_id' => $user->id,
+            'template_id' => '2e3a107b-2305-4ba7-97ad-a69a79995203',
             'slug' => 'test-portfolio',
             'status' => 'draft',
         ]);
@@ -120,7 +139,7 @@ class PortfolioEditViewTest extends TestCase
 
     private function createPortfolioSchema(): void
     {
-        foreach (['links', 'experiences', 'education', 'projects', 'skills', 'portfolio_info', 'portfolios', 'users'] as $table) {
+        foreach (['links', 'experiences', 'education', 'projects', 'skills', 'portfolio_info', 'portfolios', 'templates', 'users'] as $table) {
             Schema::dropIfExists($table);
         }
 
@@ -131,6 +150,16 @@ class PortfolioEditViewTest extends TestCase
             $table->text('avatar_url')->nullable();
             $table->timestampTz('created_at')->nullable();
         });
+        Schema::create('templates', function (Blueprint $table): void {
+            $table->uuid('id')->primary();
+            $table->string('name');
+            $table->string('slug');
+        });
+        DB::table('templates')->insert([
+            'id' => '2e3a107b-2305-4ba7-97ad-a69a79995203',
+            'name' => 'Creative',
+            'slug' => 'creative',
+        ]);
         Schema::create('portfolios', function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->uuid('user_id');
