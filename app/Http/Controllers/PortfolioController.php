@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Rules\ValidPhoneNumber;
+use App\Support\PhoneNumberMetadata;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -12,7 +14,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use libphonenumber\NumberParseException;
+use libphonenumber\PhoneNumberFormat;
+use libphonenumber\PhoneNumberUtil;
 
 class PortfolioController extends Controller
 {
@@ -143,9 +149,10 @@ class PortfolioController extends Controller
             'headline' => 'nullable|string|max:120',
             'bio' => 'nullable|string|max:500',
             'location' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:40',
-            'phone_country_code' => 'nullable|string|regex:/^\+[1-9][0-9]{0,2}$/',
-            'phone_number' => 'nullable|string|max:35',
+            'phone' => ['nullable', 'string', 'max:40', new ValidPhoneNumber],
+            'phone_region' => ['nullable', 'string', 'size:2', Rule::in(PhoneNumberMetadata::supportedRegions()), 'required_with:phone_number'],
+            'phone_country_code' => ['nullable', 'string', 'regex:/^\+[1-9][0-9]{0,2}$/', 'required_with:phone_number'],
+            'phone_number' => ['nullable', 'string', 'max:40', 'regex:/^\+?[0-9\s().-]+$/', new ValidPhoneNumber],
             'profile_photo' => 'nullable|image|mimes:jpeg,png,webp|dimensions:max_width=4096,max_height=4096|max:4096',
             'skills' => 'nullable|string|max:1200',
             'projects' => 'nullable|array|max:8',
@@ -222,22 +229,39 @@ class PortfolioController extends Controller
         }
 
         $numberInput = $request->input('phone_number', '');
-        $number = is_scalar($numberInput) ? trim((string) $numberInput) : '';
-        $countryCodeInput = $request->input('phone_country_code', '+63');
-        $countryCode = is_string($countryCodeInput) ? trim($countryCodeInput) : '+63';
-        if (Str::startsWith($number, $countryCode)) {
-            $number = trim(substr($number, strlen($countryCode)));
-        }
-        if ($countryCode === '+63') {
-            $number = preg_replace('/^0/', '', $number);
-        }
-        if ($number === '') {
+        if (! is_string($numberInput) || trim($numberInput) === '') {
             $request->merge(['phone' => null]);
 
             return;
         }
 
-        $request->merge(['phone' => trim($countryCode.' '.$number)]);
+        $number = trim($numberInput);
+        $countryCodeInput = $request->input('phone_country_code', '+63');
+        $countryCode = is_string($countryCodeInput) ? trim($countryCodeInput) : '+63';
+        $regionInput = $request->input('phone_region');
+        $region = is_string($regionInput) ? strtoupper(trim($regionInput)) : '';
+        $phoneUtil = PhoneNumberUtil::getInstance();
+        if (! in_array($region, PhoneNumberMetadata::supportedRegions(), true)
+            || ! preg_match('/^\+[1-9][0-9]{0,2}$/', $countryCode)
+            || $phoneUtil->getCountryCodeForRegion($region) !== (int) substr($countryCode, 1)) {
+            $request->merge(['phone' => null]);
+
+            return;
+        }
+
+        try {
+            $parsedNumber = $phoneUtil->parse($number, $region);
+            $isMatchingCountry = $parsedNumber->getCountryCode() === (int) substr($countryCode, 1);
+            $isValidNumber = $phoneUtil->isValidNumberForRegion($parsedNumber, $region);
+
+            $request->merge([
+                'phone' => $isMatchingCountry && $isValidNumber
+                    ? $phoneUtil->format($parsedNumber, PhoneNumberFormat::INTERNATIONAL)
+                    : null,
+            ]);
+        } catch (NumberParseException) {
+            $request->merge(['phone' => null]);
+        }
     }
 
     private function infoNames(): array
@@ -246,6 +270,7 @@ class PortfolioController extends Controller
             'full_name' => 'full name',
             'contact_email' => 'email',
             'phone_country_code' => 'country calling code',
+            'phone_region' => 'country',
             'phone_number' => 'contact number',
             'profile_photo' => 'profile photo',
             'bio' => 'about me',
