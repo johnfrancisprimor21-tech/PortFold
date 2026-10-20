@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-default-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    @include('portfolio.partials.theme-init')
     <title>@yield('title', 'Portfold')</title>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -15,7 +16,31 @@
             --primary: #2563eb;  --primary-hover: #1d4ed8;
             --success: #74c69d;  --warn: #f2c14e;  --danger: #fca5a5;
             --focus: #93c5fd;
+            --ink: var(--text);
+            --nav-bg: #111;
+            --nav-hover: #fff;
+            --theme-control-bg: var(--surface-2);
+            --theme-control-border: var(--border-strong);
+            --theme-control-hover: #252525;
+            --theme-control-active: var(--primary);
+            color-scheme: dark;
             --radius: 10px;
+        }
+
+        :root[data-theme="light"] {
+            --bg: #f4f7fb;  --surface: #fff;  --surface-2: #edf2f7;
+            --border: #dce3ec;  --border-strong: #bac6d5;
+            --text: #1b2735;  --muted: #526174;
+            --primary: #245ac7;  --primary-hover: #194ba9;
+            --success: #176b45;  --warn: #825800;  --danger: #a52b2b;
+            --focus: #245ac7;
+            --nav-bg: #fff;
+            --nav-hover: #17212f;
+            --theme-control-bg: #fff;
+            --theme-control-border: #c5cfdb;
+            --theme-control-hover: #edf2f7;
+            --theme-control-active: #245ac7;
+            color-scheme: light;
         }
 
         html { scroll-behavior: smooth; }
@@ -28,14 +53,14 @@
         .skip-link:focus { top: 12px; }
 
         /* ---------- Navigation ---------- */
-        .topnav { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 clamp(16px, 4vw, 40px); min-height: 64px; border-bottom: 1px solid var(--border); background: #111; position: sticky; top: 0; z-index: 30; }
-        .brand { font-size: 20px; font-weight: 700; color: #fff; text-decoration: none; letter-spacing: -.5px; }
+        .topnav { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 clamp(16px, 4vw, 40px); min-height: 64px; border-bottom: 1px solid var(--border); background: var(--nav-bg); position: sticky; top: 0; z-index: 30; }
+        .brand { font-size: 20px; font-weight: 700; color: var(--text); text-decoration: none; letter-spacing: -.5px; }
         .nav-links { display: flex; gap: 4px; }
         .nav-links a { color: var(--muted); text-decoration: none; font-size: 15px; padding: 10px 14px; border-radius: 8px; min-height: 44px; display: inline-flex; align-items: center; transition: color .2s, background .2s; }
-        .nav-links a:hover { color: #fff; background: var(--surface-2); }
-        .nav-links a[aria-current="page"] { color: #fff; background: var(--surface-2); box-shadow: inset 0 -2px 0 var(--primary); }
+        .nav-links a:hover { color: var(--nav-hover); background: var(--surface-2); }
+        .nav-links a[aria-current="page"] { color: var(--text); background: var(--surface-2); box-shadow: inset 0 -2px 0 var(--primary); }
         .nav-action { color: var(--muted); background: transparent; border: 0; font: inherit; font-size: 15px; padding: 10px 14px; border-radius: 8px; min-height: 44px; cursor: pointer; }
-        .nav-action:hover { color: #fff; background: var(--surface-2); }
+        .nav-action:hover { color: var(--nav-hover); background: var(--surface-2); }
 
         .container { max-width: 960px; margin: 0 auto; padding: 32px 20px 64px; }
         .container.wide { max-width: 1100px; }
@@ -45,7 +70,7 @@
         .stepper li { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
         .stepper li + li::before { content: ""; width: 28px; height: 1px; background: var(--border-strong); margin-right: 4px; }
         .stepper .num { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--border-strong); display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
-        .stepper .current { color: #fff; font-weight: 600; }
+        .stepper .current { color: var(--text); font-weight: 600; }
         .stepper .current .num { background: var(--primary); border-color: var(--primary); color: #fff; }
         .stepper .done .num { background: #1a3a2a; border-color: #2d6a4f; color: var(--success); }
 
@@ -62,31 +87,31 @@
         .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 20px; border-radius: 8px; font: inherit; font-size: 15px; font-weight: 500; cursor: pointer; text-decoration: none; border: 1px solid transparent; transition: background .2s, border-color .2s, color .2s; }
         .btn-primary { background: var(--primary); color: #fff; }
         .btn-primary:hover { background: var(--primary-hover); }
-        .btn-secondary { background: #222; color: #ddd; border-color: var(--border-strong); }
-        .btn-secondary:hover { background: #2a2a2a; color: #fff; }
+        .btn-secondary { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
+        .btn-secondary:hover { background: var(--border); color: var(--text); }
         .btn-danger { background: #7f1d1d; color: #fecaca; border-color: #991b1b; }
         .btn-danger:hover { background: #991b1b; }
         .btn-sm { min-height: 40px; padding: 8px 14px; font-size: 14px; }
         .btn[disabled], .btn[aria-busy="true"] { opacity: .55; cursor: not-allowed; }
 
         /* ---------- Typography ---------- */
-        .page-title { font-size: 28px; font-weight: 700; color: #fff; line-height: 1.25; margin-bottom: 8px; }
+        .page-title { font-size: 28px; font-weight: 700; color: var(--text); line-height: 1.25; margin-bottom: 8px; }
         .page-subtitle { font-size: 16px; color: var(--muted); margin-bottom: 28px; }
         .muted { color: var(--muted); }
 
         /* ---------- Forms ---------- */
         .form-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 24px; scroll-margin-top: 80px; }
-        .form-section > h2 { font-size: 17px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+        .form-section > h2 { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
         .form-section > .section-help { font-size: 14px; color: var(--muted); margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
         .form-group { margin-bottom: 18px; }
-        .form-group > label, .form-group > .label { display: block; font-size: 14px; font-weight: 500; color: #d4d8e0; margin-bottom: 6px; }
+        .form-group > label, .form-group > .label { display: block; font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
         .req { color: #f87171; margin-left: 2px; }
         .help { display: block; font-size: 13px; color: var(--muted); margin-top: 6px; }
         .form-group input[type="text"], .form-group input[type="email"], .form-group input[type="url"], .form-group textarea {
             width: 100%; min-height: 44px; padding: 10px 14px; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 8px; color: var(--text); font: inherit; font-size: 15px; transition: border-color .2s;
         }
-        .form-group input::placeholder, .form-group textarea::placeholder { color: #7d8594; }
-        .form-group input:hover, .form-group textarea:hover { border-color: #555; }
+        .form-group input::placeholder, .form-group textarea::placeholder { color: var(--muted); }
+        .form-group input:hover, .form-group textarea:hover { border-color: var(--border-strong); }
         .form-group input:focus, .form-group textarea:focus { border-color: var(--primary); outline: 2px solid rgba(147,197,253,.5); outline-offset: 0; }
         .form-group textarea { resize: vertical; min-height: 96px; }
         .form-group input[aria-invalid="true"], .form-group textarea[aria-invalid="true"] { border-color: #ef4444; }
@@ -111,12 +136,12 @@
         .tpl-badge { font-size: 12px; font-weight: 500; padding: 2px 10px; border-radius: 10px; display: inline-block; margin-bottom: 10px; }
         .badge-simple { background: #1a3a2a; color: #74c69d; } .badge-modern { background: #1e1b4b; color: #a5b4fc; } .badge-creative { background: #2d1a2a; color: #f9a8d4; }
         .auth-card { width: min(100%, 460px); margin: 40px auto; padding: 28px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
-        .auth-card h1 { color: #fff; font-size: 26px; margin-bottom: 6px; }
+        .auth-card h1 { color: var(--text); font-size: 26px; margin-bottom: 6px; }
         .auth-card > p { color: var(--muted); margin-bottom: 22px; }
         .auth-card .form-group input { width: 100%; min-height: 46px; padding: 10px 14px; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 8px; color: var(--text); font: inherit; }
         .auth-card .form-group input:focus { border-color: var(--primary); outline: 2px solid rgba(147,197,253,.5); }
         .auth-card .auth-links { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 18px; color: var(--muted); font-size: 14px; }
-        .auth-card .auth-links a { color: #bfdbfe; }
+        .auth-card .auth-links a { color: var(--primary); }
         .auth-card .remember { display: flex; align-items: center; gap: 9px; color: var(--muted); margin: 12px 0 18px; }
         .auth-card .remember input { width: 18px; height: 18px; }
         .auth-card .btn { width: 100%; }
@@ -127,9 +152,88 @@
         .google-auth-button:active { transform: translateY(0); }
         .google-auth-button svg { width: 18px; height: 18px; flex: none; }
         .nav-links form { display: flex; }
+        .phone-field { border: 0; min-width: 0; padding: 0; }
+        @include('portfolio.partials.theme-toggle-styles')
         @media (max-width: 620px) { .topnav { gap: 6px; padding: 0 12px; } .nav-links { gap: 0; flex-wrap: wrap; justify-content: flex-end; } .nav-links a, .nav-action { font-size: 13px; padding: 8px; } }
     </style>
     @yield('styles')
+    <style>
+        :root[data-theme="light"] .alert-success { background: #eaf7ef; border-color: #a8d9ba; }
+        :root[data-theme="light"] .alert-error { background: #fff0ef; border-color: #e7b2ae; }
+        :root[data-theme="light"] .alert-close:hover { background: rgba(23,33,47,.07); }
+        :root[data-theme="light"] .google-auth-button:hover { background: #e8edf4; border-color: #aeb9c8; }
+        :root[data-theme="light"] .hero h1,
+        :root[data-theme="light"] .how h3,
+        :root[data-theme="light"] .template-info h3,
+        :root[data-theme="light"] .portfolio-item-info h3,
+        :root[data-theme="light"] .empty-state h2,
+        :root[data-theme="light"] .tpl-info h3,
+        :root[data-theme="light"] .auth-card h1 { color: var(--text); }
+        :root[data-theme="light"] .hero .badge { background: #e7f0ff; border-color: #c8daf7; color: #244e8d; }
+        :root[data-theme="light"] .confirmation-icon { background: linear-gradient(145deg, #eaf7ef, #f7fbf8); border-color: #a8d9ba; color: #176b45; }
+        :root[data-theme="light"] .confirmation-eyebrow { color: var(--success) !important; }
+        :root[data-theme="light"] .confirmation-steps { background: var(--surface-2); }
+        :root[data-theme="light"] .confirmation-status[data-kind="success"] { border-color: #a8d9ba; color: #176b45; }
+        :root[data-theme="light"] .confirmation-actions .text-link { color: var(--primary); }
+        :root[data-theme="light"] .how li,
+        :root[data-theme="light"] .template-card,
+        :root[data-theme="light"] .portfolio-item,
+        :root[data-theme="light"] .auth-card,
+        :root[data-theme="light"] .tpl-card { background: var(--surface); border-color: var(--border); }
+        :root[data-theme="light"] .portfolio-item-info p,
+        :root[data-theme="light"] .trash-section > p,
+        :root[data-theme="light"] .empty-state,
+        :root[data-theme="light"] .empty-state p,
+        :root[data-theme="light"] .tpl-info p,
+        :root[data-theme="light"] .tpl-tags,
+        :root[data-theme="light"] .actions .hint,
+        :root[data-theme="light"] .step-label { color: var(--muted); }
+        :root[data-theme="light"] .trash-section { border-color: var(--border); }
+        :root[data-theme="light"] .status-published { background: #eaf7ef; color: #176b45; border-color: #a8d9ba; }
+        :root[data-theme="light"] .status-draft { background: #fff7df; color: #825800; border-color: #e8d49a; }
+        :root[data-theme="light"] .editor-shell {
+            --editor-ink: #1b2735;
+            --editor-muted: #526174;
+            --editor-line: #dce3ec;
+            --editor-panel: #fff;
+            --editor-panel-soft: #f5f7fa;
+            --editor-accent: #16724d;
+            --editor-accent-ink: #fff;
+        }
+        :root[data-theme="light"] .editor-sidebar,
+        :root[data-theme="light"] .editor-section,
+        :root[data-theme="light"] .photo-card,
+        :root[data-theme="light"] .editor-actions { background: var(--surface); border-color: var(--border); }
+        :root[data-theme="light"] .repeatable-item { background: var(--surface-2); border-color: var(--border); }
+        :root[data-theme="light"] .editor-section .form-group > label,
+        :root[data-theme="light"] .editor-section .phone-field legend { color: var(--editor-ink); }
+        :root[data-theme="light"] .editor-section .form-group input[type="text"],
+        :root[data-theme="light"] .editor-section .form-group input[type="email"],
+        :root[data-theme="light"] .editor-section .form-group input[type="url"],
+        :root[data-theme="light"] .editor-section .form-group textarea,
+        :root[data-theme="light"] .phone-control select,
+        :root[data-theme="light"] .phone-control input { background: var(--surface-2); border-color: var(--border-strong); color: var(--editor-ink); }
+        :root[data-theme="light"] .editor-section .form-group input::placeholder,
+        :root[data-theme="light"] .editor-section .form-group textarea::placeholder,
+        :root[data-theme="light"] .editor-section .form-help { color: var(--editor-muted); }
+        :root[data-theme="light"] .photo-preview-box,
+        :root[data-theme="light"] .screenshot-preview-box { background: var(--surface-2); border-color: var(--border-strong); color: var(--editor-muted); }
+        :root[data-theme="light"] .photo-upload-controls input[type="file"]::file-selector-button,
+        :root[data-theme="light"] .editor-section input[type="file"]::file-selector-button { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
+        :root[data-theme="light"] .editor-actions .btn-secondary { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
+        :root[data-theme="light"] .add-btn { border-color: var(--border-strong); color: var(--muted); }
+        :root[data-theme="light"] .add-btn:hover { background: var(--surface-2); color: var(--text); }
+        :root[data-theme="light"] .section-nav a { color: var(--muted); }
+        :root[data-theme="light"] .section-nav a:hover,
+        :root[data-theme="light"] .section-nav a[aria-current="location"] { color: var(--text); background: #eaf3ee; }
+        :root[data-theme="light"] .sidebar-label,
+        :root[data-theme="light"] .section-nav .nav-number,
+        :root[data-theme="light"] .sidebar-note,
+        :root[data-theme="light"] .remove-btn { color: var(--muted); }
+        :root[data-theme="light"] .editor-section .field-error { color: var(--danger); }
+        :root[data-theme="light"] .error-summary { background: #fff0ef; border-color: #e7b2ae; color: #852323; }
+        :root[data-theme="light"] .error-summary p { color: var(--danger); }
+    </style>
 </head>
 <body>
 @php
@@ -150,6 +254,7 @@
             <a href="{{ route('login') }}" @if(request()->routeIs('login')) aria-current="page" @endif>Sign in</a>
             <a href="{{ route('register') }}" @if(request()->routeIs('register')) aria-current="page" @endif>Create account</a>
         @endauth
+        @include('portfolio.partials.theme-toggle')
     </nav>
 </header>
 
@@ -226,6 +331,7 @@
     }
 })();
 </script>
+@include('portfolio.partials.theme-toggle-script')
 @yield('scripts')
 </body>
 </html>
